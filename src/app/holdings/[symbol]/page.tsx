@@ -195,11 +195,23 @@ export default function HoldingDetailPage() {
     );
   }
 
-  const totalPnlPercent =
-    holding.totalCostBasis > 0 ? (holding.totalPnl / holding.totalCostBasis) * 100 : 0;
-  const netEarnings = holding.totalPnl + holding.totalDividends;
-  const netEarningsPercent =
-    holding.totalCostBasis > 0 ? (netEarnings / holding.totalCostBasis) * 100 : 0;
+  // Position Return % = (Current Price - Avg Cost) / Avg Cost
+  const positionReturnPercent =
+    holding.avgCostBasis > 0
+      ? ((holding.currentPrice - holding.avgCostBasis) / holding.avgCostBasis) * 100
+      : 0;
+
+  // Total P&L = Realized + Unrealized
+  const totalPnl = holding.realizedPnl + holding.unrealizedPnl;
+  
+  // Commissions from transactions or fallback
+  const totalCommissions = totals?.totalCommissions ?? (holding.totalCommissions || 0);
+  
+  // Net Dividends from transactions or fallback
+  const netDividends = totals?.netDividends ?? holding.totalDividends;
+  
+  // Net Earnings = Total P&L + Dividends - Commissions
+  const netEarnings = totalPnl + netDividends - totalCommissions;
 
   const tabs: { id: TabType; label: string; icon: React.ElementType; count?: number }[] = [
     { id: "trades", label: "Trades", icon: Activity, count: transactions?.trades.length },
@@ -256,173 +268,141 @@ export default function HoldingDetailPage() {
           </Button>
         </motion.div>
 
-        {/* Position Summary */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <Card className="border-border/50 shadow-card">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                <Wallet className="h-4 w-4" />
-                Position Summary
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-6 md:grid-cols-5">
-                <div>
-                  <p className="text-sm text-muted-foreground">Current Holdings</p>
-                  <p className="text-2xl font-bold">
-                    {holding.quantity.toLocaleString()}{" "}
-                    <span className="text-sm font-normal text-muted-foreground">shares</span>
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Current Price</p>
-                  <p className="text-2xl font-bold">{formatCurrency(holding.currentPrice)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Market Value</p>
-                  <p className="text-2xl font-bold">{formatCurrency(holding.marketValue)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Average Cost</p>
-                  <p className="text-2xl font-bold">{formatCurrency(holding.avgCostBasis)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Cost Basis</p>
-                  <p className="text-2xl font-bold">{formatCurrency(holding.totalCostBasis)}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Stats Grid */}
+        {/* Summary Cards - 2 Column Layout */}
         <div className="grid gap-6 lg:grid-cols-2">
-          {/* Profit & Loss */}
+          {/* Position Snapshot */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+          >
+            <Card className="border-border/50 shadow-card h-full">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <Wallet className="h-4 w-4 text-primary" />
+                  <CardTitle className="text-sm font-semibold uppercase tracking-wider">
+                    Position Snapshot
+                  </CardTitle>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Current value of this position
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Shares</span>
+                  <span className="font-semibold">{holding.quantity.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Avg Cost</span>
+                  <span className="font-semibold">{formatCurrency(holding.avgCostBasis)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Current Price</span>
+                  <span className="font-semibold">{formatCurrency(holding.currentPrice)}</span>
+                </div>
+                <div className="border-t border-border my-2" />
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Cost Basis</span>
+                  <span className="font-semibold">{formatCurrency(holding.totalCostBasis)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Market Value</span>
+                  <span className="font-semibold">{formatCurrency(holding.marketValue)}</span>
+                </div>
+                {holding.quantity > 0 && (
+                  <>
+                    <div className="border-t border-border my-2" />
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium">Position Return</span>
+                      <span
+                        className={cn(
+                          "text-lg font-bold flex items-center gap-1",
+                          positionReturnPercent >= 0 ? "text-success" : "text-destructive"
+                        )}
+                      >
+                        {positionReturnPercent >= 0 ? (
+                          <TrendingUp className="h-4 w-4" />
+                        ) : (
+                          <TrendingDown className="h-4 w-4" />
+                        )}
+                        {positionReturnPercent >= 0 ? "+" : ""}
+                        {positionReturnPercent.toFixed(1)}%
+                      </span>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Net Earnings */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <Card className="border-border/50 shadow-card h-full">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4" />
-                  Profit & Loss
-                </CardTitle>
+            <Card className="border-border/50 shadow-card h-full bg-gradient-to-br from-card to-primary/5">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                  <CardTitle className="text-sm font-semibold uppercase tracking-wider">
+                    Net Earnings
+                  </CardTitle>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Total profit after dividends and fees
+                </p>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-between items-center py-2">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Realized P&L</p>
-                  </div>
-                  <p
+              <CardContent className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Realized P&L</span>
+                  <span
                     className={cn(
-                      "text-xl font-semibold",
+                      "font-semibold",
                       holding.realizedPnl >= 0 ? "text-success" : "text-destructive"
                     )}
                   >
                     {holding.realizedPnl >= 0 ? "+" : ""}
                     {formatCurrency(holding.realizedPnl)}
-                  </p>
+                  </span>
                 </div>
-                <div className="flex justify-between items-center py-2">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Unrealized P&L</p>
-                    <p className="text-xs text-muted-foreground">(current position)</p>
-                  </div>
-                  <p
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Unrealized P&L</span>
+                  <span
                     className={cn(
-                      "text-xl font-semibold",
+                      "font-semibold",
                       holding.unrealizedPnl >= 0 ? "text-success" : "text-destructive"
                     )}
                   >
                     {holding.unrealizedPnl >= 0 ? "+" : ""}
                     {formatCurrency(holding.unrealizedPnl)}
-                  </p>
+                  </span>
                 </div>
-                <div className="border-t border-border pt-4 flex justify-between items-center">
-                  <p className="font-medium">Total P&L</p>
-                  <div className="flex items-center gap-2">
-                    <p
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Net Dividends</span>
+                  <span className="font-semibold text-success">
+                    +{formatCurrency(netDividends)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Commissions</span>
+                  <span className="font-semibold text-destructive">
+                    -{formatCurrency(totalCommissions)}
+                  </span>
+                </div>
+                <div className="border-t-2 border-primary/30 pt-4 mt-2">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold">Net Earnings</span>
+                    <span
                       className={cn(
                         "text-2xl font-bold",
-                        holding.totalPnl >= 0 ? "text-success" : "text-destructive"
-                      )}
-                    >
-                      {holding.totalPnl >= 0 ? "+" : ""}
-                      {formatCurrency(holding.totalPnl)}
-                    </p>
-                    <Badge variant={holding.totalPnl >= 0 ? "success" : "destructive"}>
-                      {totalPnlPercent >= 0 ? "+" : ""}
-                      {totalPnlPercent.toFixed(1)}%
-                    </Badge>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Net Result */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-          >
-            <Card className="border-border/50 shadow-card h-full bg-gradient-to-br from-card to-primary/5">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4" />
-                  Net Result
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-between items-center py-2">
-                  <p className="text-sm text-muted-foreground">Total P&L</p>
-                  <p
-                    className={cn(
-                      "text-lg font-semibold",
-                      holding.totalPnl >= 0 ? "text-success" : "text-destructive"
-                    )}
-                  >
-                    {holding.totalPnl >= 0 ? "+" : ""}
-                    {formatCurrency(holding.totalPnl)}
-                  </p>
-                </div>
-                <div className="flex justify-between items-center py-2">
-                  <p className="text-sm text-muted-foreground">Net Dividends</p>
-                  <p className="text-lg font-semibold text-success">
-                    +{formatCurrency(totals?.netDividends ?? holding.totalDividends * 0.85)}
-                  </p>
-                </div>
-                <div className="flex justify-between items-center py-2">
-                  <p className="text-sm text-muted-foreground">Commissions</p>
-                  <p className="text-lg font-semibold text-destructive">
-                    -{formatCurrency(totals?.totalCommissions ?? 0)}
-                  </p>
-                </div>
-                <div className="border-t-2 border-primary/30 pt-4 flex justify-between items-center">
-                  <p className="font-semibold text-lg">NET EARNINGS</p>
-                  <div className="flex items-center gap-3">
-                    <p
-                      className={cn(
-                        "text-3xl font-bold",
                         netEarnings >= 0 ? "text-success" : "text-destructive"
                       )}
                     >
                       {netEarnings >= 0 ? "+" : ""}
                       {formatCurrency(netEarnings)}
-                    </p>
-                    <Badge
-                      variant={netEarnings >= 0 ? "success" : "destructive"}
-                      className="text-sm px-2 py-1"
-                    >
-                      {netEarningsPercent >= 0 ? "+" : ""}
-                      {netEarningsPercent.toFixed(1)}% return
-                    </Badge>
+                    </span>
                   </div>
                 </div>
               </CardContent>

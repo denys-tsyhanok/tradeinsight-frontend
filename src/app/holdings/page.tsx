@@ -22,7 +22,7 @@ import {
   Input,
 } from "@/components/ui";
 import { HoldingsTable } from "@/components/dashboard/holdings-table";
-import { DonutChart, MetricCard } from "@/components/dashboard";
+import { MetricCard } from "@/components/dashboard";
 import { formatCurrency } from "@/lib/utils";
 import {
   portfoliosApi,
@@ -111,45 +111,6 @@ export default function HoldingsPage() {
     };
   }, [holdings]);
 
-  // Prepare donut chart data
-  const chartData = React.useMemo(() => {
-    const openHoldings = holdings
-      .filter((h) => h.status === "open" && h.marketValue > 0)
-      .sort((a, b) => b.marketValue - a.marketValue)
-      .slice(0, 5);
-
-    const topHoldingsValue = openHoldings.reduce((sum, h) => sum + h.marketValue, 0);
-    const otherValue = stats.totalValue - topHoldingsValue;
-
-    const colors = [
-      "hsl(var(--chart-1))",
-      "hsl(var(--chart-2))",
-      "hsl(var(--chart-3))",
-      "hsl(var(--chart-4))",
-      "hsl(var(--chart-5))",
-      "hsl(var(--muted-foreground))",
-    ];
-
-    const data = openHoldings.map((h, i) => ({
-      name: h.companyName || h.symbol,
-      symbol: h.symbol,
-      value: h.marketValue,
-      percentage: h.percentOfPortfolio,
-      color: colors[i],
-    }));
-
-    if (otherValue > 0) {
-      data.push({
-        name: "Others",
-        symbol: "OTHER",
-        value: otherValue,
-        percentage: (otherValue / stats.totalValue) * 100,
-        color: colors[5],
-      });
-    }
-
-    return data;
-  }, [holdings, stats.totalValue]);
 
   // Export to CSV
   const handleExport = () => {
@@ -371,36 +332,18 @@ export default function HoldingsPage() {
               </div>
             </motion.div>
 
-            {/* Content Grid */}
-            <div className="grid gap-6 xl:grid-cols-[1fr_350px]">
-              {/* Holdings Table */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-              >
-                <HoldingsTable 
-                  holdings={filteredHoldings} 
-                  portfolioId={activePortfolio.id}
-                  isLoading={isLoading} 
-                />
-              </motion.div>
-
-              {/* Distribution Chart */}
-              {chartData.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4 }}
-                >
-                  <DonutChart
-                    data={chartData}
-                    title="Portfolio Distribution"
-                    centerValue={formatCurrency(stats.totalValue)}
-                  />
-                </motion.div>
-              )}
-            </div>
+            {/* Holdings Table */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <HoldingsTable 
+                holdings={filteredHoldings} 
+                portfolioId={activePortfolio.id}
+                isLoading={isLoading} 
+              />
+            </motion.div>
           </>
         )}
       </div>

@@ -13,6 +13,7 @@ import {
   AlertCircle,
   ChevronRight,
   ChevronLeft,
+  Layers,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout";
 import {
@@ -25,13 +26,24 @@ import {
   Input,
 } from "@/components/ui";
 import { MetricCard } from "@/components/dashboard";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { cn, formatCurrency, formatDate } from "@/lib/utils";
 import {
   dividendsApi,
   type DividendResponseDto,
   type DividendSummaryDto,
 } from "@/lib/api";
 import { usePortfolio } from "@/providers";
+
+type DisplayMode = "all" | "stacked";
+
+interface StackedDividend {
+  symbol: string;
+  totalGross: number;
+  totalTax: number;
+  totalNet: number;
+  paymentCount: number;
+  dividends: DividendResponseDto[];
+}
 
 export default function DividendsPage() {
   const { activePortfolio, isLoading: isPortfolioLoading } = usePortfolio();
@@ -40,6 +52,7 @@ export default function DividendsPage() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [searchQuery, setSearchQuery] = React.useState("");
+  const [displayMode, setDisplayMode] = React.useState<DisplayMode>("all");
   const [currentPage, setCurrentPage] = React.useState(1);
   const pageSize = 10;
 
@@ -75,12 +88,46 @@ export default function DividendsPage() {
     );
   }, [dividends, searchQuery]);
 
+  // Stacked dividends - group by symbol
+  const stackedDividends = React.useMemo(() => {
+    if (displayMode !== "stacked") return [];
+
+    const groupMap = new Map<string, StackedDividend>();
+
+    filteredDividends.forEach((dividend) => {
+      const existing = groupMap.get(dividend.symbol);
+
+      if (existing) {
+        existing.totalGross += dividend.grossAmount;
+        existing.totalTax += dividend.taxWithheld;
+        existing.totalNet += dividend.netAmount;
+        existing.paymentCount += 1;
+        existing.dividends.push(dividend);
+      } else {
+        groupMap.set(dividend.symbol, {
+          symbol: dividend.symbol,
+          totalGross: dividend.grossAmount,
+          totalTax: dividend.taxWithheld,
+          totalNet: dividend.netAmount,
+          paymentCount: 1,
+          dividends: [dividend],
+        });
+      }
+    });
+
+    // Sort by total net amount descending
+    return Array.from(groupMap.values()).sort((a, b) => b.totalNet - a.totalNet);
+  }, [filteredDividends, displayMode]);
+
   // Paginate
-  const totalPages = Math.ceil(filteredDividends.length / pageSize);
-  const paginatedDividends = filteredDividends.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  );
+  const itemsToDisplay = displayMode === "stacked" ? stackedDividends : filteredDividends;
+  const totalPages = Math.ceil(itemsToDisplay.length / pageSize);
+  const paginatedDividends = displayMode === "stacked"
+    ? []
+    : filteredDividends.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const paginatedStackedDividends = displayMode === "stacked"
+    ? stackedDividends.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+    : [];
 
 
   // Show loading if portfolio is loading
@@ -160,8 +207,6 @@ export default function DividendsPage() {
           <MetricCard
             label="Total Dividends (Gross)"
             value={summary?.totalGross ?? 0}
-            change={summary && summary.totalGross > 0 ? 12.5 : undefined}
-            changeLabel="vs last year"
             icon={Coins}
             delay={1}
           />
@@ -186,12 +231,12 @@ export default function DividendsPage() {
           />
         </div>
 
-        {/* Search */}
+        {/* Search and Filters */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="flex gap-2"
+          className="flex flex-wrap gap-3"
         >
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -205,6 +250,39 @@ export default function DividendsPage() {
               className="pl-9"
             />
           </div>
+
+          {/* Display Mode: All / Stacked */}
+          <div className="flex gap-1 rounded-lg bg-tertiary p-1">
+            <button
+              onClick={() => {
+                setDisplayMode("all");
+                setCurrentPage(1);
+              }}
+              className={cn(
+                "rounded-md px-3 py-1.5 text-sm font-medium transition-all",
+                displayMode === "all"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              All
+            </button>
+            <button
+              onClick={() => {
+                setDisplayMode("stacked");
+                setCurrentPage(1);
+              }}
+              className={cn(
+                "rounded-md px-3 py-1.5 text-sm font-medium transition-all flex items-center gap-1",
+                displayMode === "stacked"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Layers className="h-3.5 w-3.5" />
+              Stacked
+            </button>
+          </div>
         </motion.div>
 
         {/* Dividends List */}
@@ -215,9 +293,13 @@ export default function DividendsPage() {
         >
           <Card className="border-border/50 shadow-card">
             <CardHeader className="flex flex-row items-center justify-between pb-4">
-              <CardTitle className="text-heading-sm">All Dividends</CardTitle>
+              <CardTitle className="text-heading-sm">
+                {displayMode === "stacked" ? "Dividends by Symbol" : "All Dividends"}
+              </CardTitle>
               <Badge variant="secondary">
-                {filteredDividends.length} payments
+                {displayMode === "stacked"
+                  ? `${stackedDividends.length} symbols (${filteredDividends.length} payments)`
+                  : `${filteredDividends.length} payments`}
               </Badge>
             </CardHeader>
             <CardContent className="p-0">
@@ -225,7 +307,7 @@ export default function DividendsPage() {
                 <div className="flex items-center justify-center py-12">
                   <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
-              ) : filteredDividends.length === 0 ? (
+              ) : itemsToDisplay.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12">
                   <Coins className="h-12 w-12 text-muted-foreground" />
                   <p className="mt-4 font-medium">No dividends found</p>
@@ -233,6 +315,79 @@ export default function DividendsPage() {
                     Upload broker reports to see your dividends
                   </p>
                 </div>
+              ) : displayMode === "stacked" ? (
+                <>
+                  <div className="divide-y divide-border">
+                    {paginatedStackedDividends.map((stacked, index) => (
+                      <motion.div
+                        key={stacked.symbol}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.05 * index }}
+                        className="flex items-center justify-between p-4 transition-colors hover:bg-tertiary"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-success/10 text-success">
+                            <Coins className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold">{stacked.symbol}</span>
+                              <Badge variant="outline" className="text-xs">
+                                {stacked.paymentCount} payments
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              Tax withheld: {formatCurrency(stacked.totalTax)}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-semibold text-success">
+                            +{formatCurrency(stacked.totalNet)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Gross: {formatCurrency(stacked.totalGross)}
+                          </p>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+
+                  {/* Pagination */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between border-t border-border px-4 py-3">
+                      <span className="text-xs text-muted-foreground">
+                        Showing {(currentPage - 1) * pageSize + 1} to{" "}
+                        {Math.min(currentPage * pageSize, stackedDividends.length)} of{" "}
+                        {stackedDividends.length} symbols
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8"
+                          disabled={currentPage === 1}
+                          onClick={() => setCurrentPage(currentPage - 1)}
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <span className="text-sm">
+                          {currentPage} / {totalPages}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8"
+                          disabled={currentPage === totalPages}
+                          onClick={() => setCurrentPage(currentPage + 1)}
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </>
               ) : (
                 <>
                   <div className="divide-y divide-border">

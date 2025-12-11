@@ -264,8 +264,6 @@ export default function DashboardPage() {
               <MetricCard
                 label="Total Portfolio Value"
                 value={metrics.totalValue}
-                change={metrics.totalReturnPercent > 0 ? metrics.totalReturnPercent : undefined}
-                changeLabel="total return"
                 icon={Wallet}
                 delay={1}
               />

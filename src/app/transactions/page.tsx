@@ -13,7 +13,8 @@ import {
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
-  Filter,
+  Calendar,
+  X,
   Receipt,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout";
@@ -46,6 +47,8 @@ export default function TransactionsPage() {
   const [error, setError] = React.useState<string | null>(null);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [typeFilter, setTypeFilter] = React.useState<TransactionType>("all");
+  const [startDate, setStartDate] = React.useState<string>("");
+  const [endDate, setEndDate] = React.useState<string>("");
   const [sortField, setSortField] = React.useState<SortField>("date");
   const [sortDirection, setSortDirection] = React.useState<SortDirection>("desc");
   const [currentPage, setCurrentPage] = React.useState(1);
@@ -99,6 +102,18 @@ export default function TransactionsPage() {
       result = result.filter((t) => t.type === typeFilter);
     }
 
+    // Filter by date range
+    if (startDate) {
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      result = result.filter((t) => new Date(t.executedAt) >= start);
+    }
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      result = result.filter((t) => new Date(t.executedAt) <= end);
+    }
+
     // Sort
     result.sort((a, b) => {
       let comparison = 0;
@@ -123,7 +138,17 @@ export default function TransactionsPage() {
     });
 
     return result;
-  }, [trades, searchQuery, typeFilter, sortField, sortDirection]);
+  }, [trades, searchQuery, typeFilter, startDate, endDate, sortField, sortDirection]);
+
+  // Check if date filter is active
+  const hasDateFilter = startDate || endDate;
+
+  // Clear date filters
+  const clearDateFilter = () => {
+    setStartDate("");
+    setEndDate("");
+    setCurrentPage(1);
+  };
 
   // Pagination
   const totalPages = Math.ceil(filteredTrades.length / pageSize);
@@ -357,6 +382,42 @@ export default function TransactionsPage() {
                 {type === "all" ? "All" : type === "buy" ? "Buys" : "Sells"}
               </button>
             ))}
+          </div>
+
+          {/* Date Range Filter */}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 rounded-lg bg-tertiary px-3 py-1.5">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => {
+                  setStartDate(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="bg-transparent text-sm font-medium outline-none [color-scheme:dark]"
+                placeholder="From"
+              />
+              <span className="text-muted-foreground">—</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => {
+                  setEndDate(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="bg-transparent text-sm font-medium outline-none [color-scheme:dark]"
+                placeholder="To"
+              />
+              {hasDateFilter && (
+                <button
+                  onClick={clearDateFilter}
+                  className="ml-1 rounded p-0.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
           </div>
         </motion.div>
 

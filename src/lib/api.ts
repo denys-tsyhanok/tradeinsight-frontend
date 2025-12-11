@@ -307,6 +307,7 @@ export interface BreakdownHoldingDto {
   unrealizedPnl: number;
   totalPnl: number;
   totalDividends: number;
+  totalCommissions: number;
   percentOfPortfolio: number;
   currency: string;
 }
