@@ -98,7 +98,7 @@ export interface ReportResponseDto {
   fileName: string;
   fileType: "csv" | "json";
   fileSize: number;
-  broker: "ibkr" | "freedom_finance";
+  broker: "ibkr";
   status: "pending" | "processing" | "completed" | "failed";
   errorMessage?: string;
   transactionCount?: number;
@@ -113,7 +113,7 @@ export interface ReportListResponseDto {
   total: number;
 }
 
-export type BrokerType = "ibkr" | "freedom_finance";
+export type BrokerType = "ibkr";
 
 // ============================================================================
 // Dividend Types

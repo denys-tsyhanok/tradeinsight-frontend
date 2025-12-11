@@ -24,7 +24,6 @@ interface UploadModalProps {
 
 const brokers: { id: BrokerType; name: string; logo: string }[] = [
   { id: "ibkr", name: "Interactive Brokers", logo: "IBKR" },
-  { id: "freedom_finance", name: "Freedom Finance", logo: "FF" },
 ];
 
 const supportedFormats = [

@@ -274,8 +274,6 @@ function getBrokerLabel(broker: BrokerType) {
   switch (broker) {
     case "ibkr":
       return "IBKR";
-    case "freedom_finance":
-      return "Freedom Finance";
     default:
       return broker;
   }
@@ -285,8 +283,6 @@ function getBrokerColor(broker: BrokerType) {
   switch (broker) {
     case "ibkr":
       return "bg-red-500/10 text-red-500 border-red-500/30";
-    case "freedom_finance":
-      return "bg-blue-500/10 text-blue-500 border-blue-500/30";
     default:
       return "bg-muted/10 text-muted-foreground";
   }
@@ -733,17 +729,6 @@ export default function TransfersPage() {
                               )}
                             >
                               IBKR
-                            </button>
-                            <button
-                              onClick={() => setBrokerFilter("freedom_finance")}
-                              className={cn(
-                                "px-2.5 py-1 rounded-md text-xs font-medium transition-all",
-                                brokerFilter === "freedom_finance"
-                                  ? "bg-blue-500/20 text-blue-500 shadow-sm"
-                                  : "text-muted-foreground hover:text-foreground"
-                              )}
-                            >
-                              Freedom
                             </button>
                           </div>
                         </div>

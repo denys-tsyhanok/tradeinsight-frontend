@@ -22,7 +22,7 @@ const features = [
   {
     icon: Upload,
     title: "Multi-Broker Support",
-    description: "Upload statements from Interactive Brokers, Freedom Finance, and more.",
+    description: "Upload statements from Interactive Brokers and more.",
   },
   {
     icon: BarChart3,

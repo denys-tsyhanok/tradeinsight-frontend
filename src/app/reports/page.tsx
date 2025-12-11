@@ -38,7 +38,6 @@ import { usePortfolio } from "@/providers";
 
 const brokerConfig: Record<BrokerType, { name: string; logo: string; color: string }> = {
   ibkr: { name: "Interactive Brokers", logo: "IBKR", color: "bg-red-500/20 text-red-400" },
-  freedom_finance: { name: "Freedom Finance", logo: "FF", color: "bg-blue-500/20 text-blue-400" },
 };
 
 export default function ReportsPage() {
@@ -207,7 +206,7 @@ export default function ReportsPage() {
                 </div>
                 <div className="border-t border-border bg-tertiary/50 px-5 py-3">
                   <p className="text-xs text-muted-foreground">
-                    Supports Interactive Brokers and Freedom Finance export formats
+                    Supports Interactive Brokers export formats
                   </p>
                 </div>
               </CardContent>

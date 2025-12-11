@@ -71,7 +71,7 @@ export default function LoginPage() {
 
             <div className="mt-12 space-y-4">
               {[
-                "Multi-broker support (IBKR, Freedom Finance)",
+                "Multi-broker support (Interactive Brokers)",
                 "Real-time portfolio analysis",
                 "Dividend tracking & P&L breakdown",
               ].map((feature, index) => (
