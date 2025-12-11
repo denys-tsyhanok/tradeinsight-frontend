@@ -91,21 +91,28 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   const createPortfolio = React.useCallback(
     async (data: CreatePortfolioDto): Promise<PortfolioWithSummaryDto> => {
       const newPortfolio = await portfoliosApi.create(data);
-      // Refresh list to get the full PortfolioWithSummaryDto
-      await loadPortfolios();
-      // Find the newly created portfolio
-      const created = portfolios.find((p) => p.id === newPortfolio.id);
+      // Fetch fresh list to get the full PortfolioWithSummaryDto
+      const response = await portfoliosApi.list();
+      setPortfolios(response.portfolios);
+      
+      // Find the newly created portfolio from fresh data
+      const created = response.portfolios.find((p) => p.id === newPortfolio.id);
       if (created) {
-        setActivePortfolio(created);
+        setActivePortfolioState(created);
+        if (typeof window !== "undefined") {
+          localStorage.setItem(ACTIVE_PORTFOLIO_KEY, created.id);
+        }
         return created;
       }
-      // Return a minimal version if not found in refresh
-      return {
+      // Return a minimal version if not found
+      const minimal: PortfolioWithSummaryDto = {
         ...newPortfolio,
         summary: { reportCount: 0, holdingCount: 0 },
       };
+      setActivePortfolioState(minimal);
+      return minimal;
     },
-    [loadPortfolios, portfolios, setActivePortfolio]
+    []
   );
 
   // Delete portfolio

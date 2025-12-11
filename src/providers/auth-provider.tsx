@@ -112,6 +112,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     authApi.logout();
+    // Also clear the saved portfolio selection to prevent cross-account data leakage
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("trade_insight_active_portfolio");
+    }
     setUser(null);
     router.push("/login");
   };
