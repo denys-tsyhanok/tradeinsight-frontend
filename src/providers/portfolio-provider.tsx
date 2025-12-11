@@ -6,6 +6,7 @@ import {
   type PortfolioWithSummaryDto,
   type CreatePortfolioDto,
 } from "@/lib/api";
+import { useAuth } from "./auth-provider";
 
 interface PortfolioContextType {
   portfolios: PortfolioWithSummaryDto[];
@@ -25,6 +26,7 @@ const PortfolioContext = React.createContext<PortfolioContextType | undefined>(
 const ACTIVE_PORTFOLIO_KEY = "trade_insight_active_portfolio";
 
 export function PortfolioProvider({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const [portfolios, setPortfolios] = React.useState<PortfolioWithSummaryDto[]>(
     []
   );
@@ -67,9 +69,21 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // Only load portfolios when authenticated
   React.useEffect(() => {
-    loadPortfolios();
-  }, [loadPortfolios]);
+    if (isAuthLoading) {
+      return; // Wait for auth to complete
+    }
+    
+    if (isAuthenticated) {
+      loadPortfolios();
+    } else {
+      // Clear portfolios when logged out
+      setPortfolios([]);
+      setActivePortfolioState(null);
+      setIsLoading(false);
+    }
+  }, [isAuthenticated, isAuthLoading, loadPortfolios]);
 
   // Set active portfolio and persist to localStorage
   const setActivePortfolio = React.useCallback(
