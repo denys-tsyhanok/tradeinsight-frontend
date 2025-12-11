@@ -110,28 +110,85 @@ export function SidebarPortfolioSwitcher({ collapsed = false }: SidebarPortfolio
 
   if (!activePortfolio) {
     return (
-      <Button
-        onClick={() => setIsCreateOpen(true)}
-        variant="ghost"
-        size={collapsed ? "icon" : "default"}
-        className={cn(
-          collapsed ? "h-10 w-10" : "w-full justify-start gap-2"
-        )}
-      >
-        <Plus className="h-5 w-5 shrink-0" />
-        <AnimatePresence mode="wait">
-          {!collapsed && (
-            <motion.span
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -10 }}
-              transition={{ duration: 0.2 }}
-            >
-              Create Portfolio
-            </motion.span>
+      <>
+        <Button
+          onClick={() => setIsCreateOpen(true)}
+          variant="ghost"
+          size={collapsed ? "icon" : "default"}
+          className={cn(
+            collapsed ? "h-10 w-10" : "w-full justify-start gap-2"
           )}
-        </AnimatePresence>
-      </Button>
+        >
+          <Plus className="h-5 w-5 shrink-0" />
+          <AnimatePresence mode="wait">
+            {!collapsed && (
+              <motion.span
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                transition={{ duration: 0.2 }}
+              >
+                Create Portfolio
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </Button>
+
+        {/* Create Portfolio Dialog */}
+        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Create New Portfolio</DialogTitle>
+              <DialogDescription>
+                Create a new portfolio to organize your investments separately.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <label
+                  htmlFor="portfolio-name"
+                  className="text-sm font-medium text-foreground"
+                >
+                  Portfolio Name
+                </label>
+                <Input
+                  id="portfolio-name"
+                  placeholder="e.g., Retirement IRA, Dividend Portfolio"
+                  value={newPortfolioName}
+                  onChange={(e) => setNewPortfolioName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleCreatePortfolio();
+                  }}
+                />
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsCreateOpen(false)}
+                  disabled={isCreating}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleCreatePortfolio}
+                  disabled={!newPortfolioName.trim() || isCreating}
+                >
+                  {isCreating ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    "Create Portfolio"
+                  )}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </>
     );
   }
 
