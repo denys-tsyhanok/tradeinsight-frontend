@@ -524,7 +524,7 @@ export function PriceHistoryChart({
                 <div className="h-96 relative">
                   {/* Quarter Activity Cards - Spanning full quarter width */}
                   {quarterActivities.length > 0 && data.length > 0 && (
-                    <div className="absolute top-0 left-14 right-2 z-10 pointer-events-none" style={{ height: '130px' }}>
+                    <div className="absolute top-0 left-14 right-2 z-10 pointer-events-none" style={{ height: '105px' }}>
                       <div className="relative w-full h-full flex">
                         {quarterActivities.map((activity, idx) => {
                           const hasBuys = activity.buyQuantity > 0;
@@ -617,7 +617,7 @@ export function PriceHistoryChart({
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart
                       data={data}
-                      margin={{ top: quarterActivities.length > 0 ? 140 : 10, right: 10, left: 0, bottom: 0 }}
+                      margin={{ top: quarterActivities.length > 0 ? 95 : 10, right: 10, left: 0, bottom: 0 }}
                       onMouseMove={(e) => {
                         // Use activeTooltipIndex for precise data point selection
                         if (e && e.activeTooltipIndex !== undefined && e.activeTooltipIndex !== null) {
