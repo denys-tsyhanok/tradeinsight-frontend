@@ -170,6 +170,7 @@ function formatDate(dateStr: string, range: TimeRange): string {
 interface ChartDataPoint {
   date: string;
   displayDate: string;
+  timestamp: number;
   close: number;
   open: number;
   high: number;
@@ -178,70 +179,72 @@ interface ChartDataPoint {
   volume: number;
 }
 
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: Array<{ payload: ChartDataPoint }>;
+  avgCostBasis?: number;
+  // For controlled mode, use these instead
+  activeData?: ChartDataPoint | null;
+}
+
 const CustomTooltip = ({
   active,
   payload,
   avgCostBasis,
-}: {
-  active?: boolean;
-  payload?: Array<{ payload: ChartDataPoint }>;
-  avgCostBasis?: number;
-}) => {
-  if (active && payload && payload.length) {
-    const data = payload[0].payload;
-    const isAboveCost = avgCostBasis ? data.close >= avgCostBasis : true;
+  activeData,
+}: CustomTooltipProps) => {
+  // Use controlled activeData if provided, otherwise fall back to Recharts payload
+  const data = activeData ?? (active && payload && payload.length ? payload[0].payload : null);
+  
+  if (!data) return null;
+  
+  const isAboveCost = avgCostBasis ? data.close >= avgCostBasis : true;
 
-    return (
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="rounded-xl border border-border/50 bg-card/95 backdrop-blur-sm px-4 py-3 shadow-elevated"
-      >
-        <p className="text-xs text-muted-foreground mb-2">
-          {new Date(data.date).toLocaleDateString("en-US", {
-            weekday: "short",
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          })}
-        </p>
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between gap-6">
-            <span className="text-xs text-muted-foreground">Close</span>
-            <span
-              className={cn(
-                "text-sm font-semibold",
-                isAboveCost ? "text-success" : "text-destructive"
-              )}
-            >
-              {formatCurrency(data.close)}
+  return (
+    <div className="rounded-xl border border-border/50 bg-card/95 backdrop-blur-sm px-4 py-3 shadow-elevated">
+      <p className="text-xs text-muted-foreground mb-2">
+        {new Date(data.date).toLocaleDateString("en-US", {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        })}
+      </p>
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between gap-6">
+          <span className="text-xs text-muted-foreground">Close</span>
+          <span
+            className={cn(
+              "text-sm font-semibold",
+              isAboveCost ? "text-success" : "text-destructive"
+            )}
+          >
+            {formatCurrency(data.close)}
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-6">
+          <span className="text-xs text-muted-foreground">Open</span>
+          <span className="text-sm text-foreground">{formatCurrency(data.open)}</span>
+        </div>
+        <div className="flex items-center justify-between gap-6">
+          <span className="text-xs text-muted-foreground">High</span>
+          <span className="text-sm text-success">{formatCurrency(data.high)}</span>
+        </div>
+        <div className="flex items-center justify-between gap-6">
+          <span className="text-xs text-muted-foreground">Low</span>
+          <span className="text-sm text-destructive">{formatCurrency(data.low)}</span>
+        </div>
+        {data.volume > 0 && (
+          <div className="flex items-center justify-between gap-6 pt-1 border-t border-border/50">
+            <span className="text-xs text-muted-foreground">Volume</span>
+            <span className="text-sm text-muted-foreground">
+              {(data.volume / 1000000).toFixed(2)}M
             </span>
           </div>
-          <div className="flex items-center justify-between gap-6">
-            <span className="text-xs text-muted-foreground">Open</span>
-            <span className="text-sm text-foreground">{formatCurrency(data.open)}</span>
-          </div>
-          <div className="flex items-center justify-between gap-6">
-            <span className="text-xs text-muted-foreground">High</span>
-            <span className="text-sm text-success">{formatCurrency(data.high)}</span>
-          </div>
-          <div className="flex items-center justify-between gap-6">
-            <span className="text-xs text-muted-foreground">Low</span>
-            <span className="text-sm text-destructive">{formatCurrency(data.low)}</span>
-          </div>
-          {data.volume > 0 && (
-            <div className="flex items-center justify-between gap-6 pt-1 border-t border-border/50">
-              <span className="text-xs text-muted-foreground">Volume</span>
-              <span className="text-sm text-muted-foreground">
-                {(data.volume / 1000000).toFixed(2)}M
-              </span>
-            </div>
-          )}
-        </div>
-      </motion.div>
-    );
-  }
-  return null;
+        )}
+      </div>
+    </div>
+  );
 };
 
 export function PriceHistoryChart({
@@ -256,6 +259,7 @@ export function PriceHistoryChart({
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [selectedQuarter, setSelectedQuarter] = React.useState<QuarterActivity | null>(null);
+  const [activeIndex, setActiveIndex] = React.useState<number | null>(null);
 
   const startDateStr = getStartDate(selectedRange);
 
@@ -281,6 +285,7 @@ export function PriceHistoryChart({
         const chartData: ChartDataPoint[] = response.data.map((d: HistoricalPriceDto, idx: number) => ({
           date: d.date,
           displayDate: formatDate(d.date, selectedRange),
+          timestamp: new Date(d.date).getTime(),
           close: d.close,
           open: d.open,
           high: d.high,
@@ -613,6 +618,18 @@ export function PriceHistoryChart({
                     <AreaChart
                       data={data}
                       margin={{ top: quarterActivities.length > 0 ? 140 : 10, right: 10, left: 0, bottom: 0 }}
+                      onMouseMove={(e) => {
+                        // Use activeTooltipIndex for precise data point selection
+                        if (e && e.activeTooltipIndex !== undefined && e.activeTooltipIndex !== null) {
+                          const idx = typeof e.activeTooltipIndex === 'number' 
+                            ? e.activeTooltipIndex 
+                            : parseInt(e.activeTooltipIndex, 10);
+                          if (!isNaN(idx)) {
+                            setActiveIndex(idx);
+                          }
+                        }
+                      }}
+                      onMouseLeave={() => setActiveIndex(null)}
                     >
                       <defs>
                         <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
@@ -633,13 +650,17 @@ export function PriceHistoryChart({
                         strokeOpacity={0.5}
                       />
                       <XAxis
-                        dataKey="displayDate"
+                        dataKey="index"
                         axisLine={false}
                         tickLine={false}
                         tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
                         tickMargin={8}
                         interval="preserveStartEnd"
                         minTickGap={50}
+                        tickFormatter={(index: number) => {
+                          const point = data[index];
+                          return point ? point.displayDate : "";
+                        }}
                       />
                       <YAxis
                         domain={["auto", "auto"]}
@@ -657,6 +678,7 @@ export function PriceHistoryChart({
                           strokeWidth: 1,
                           strokeDasharray: "4 4",
                         }}
+                        isAnimationActive={false}
                       />
 
                       {/* Average Cost Basis Reference Line */}
@@ -683,12 +705,20 @@ export function PriceHistoryChart({
                         fill={fillColor}
                         animationDuration={750}
                         animationEasing="ease-out"
-                        activeDot={{
-                          r: 6,
-                          fill: strokeColor,
-                          stroke: "hsl(var(--background))",
-                          strokeWidth: 2,
-                        }}
+                        dot={false}
+                        activeDot={
+                          activeIndex !== null && data[activeIndex]
+                            ? {
+                                r: 6,
+                                fill: strokeColor,
+                                stroke: "hsl(var(--background))",
+                                strokeWidth: 2,
+                                cx: undefined, // Let Recharts calculate from activeIndex
+                                cy: undefined,
+                              }
+                            : false
+                        }
+                        isAnimationActive={true}
                       />
                     </AreaChart>
                   </ResponsiveContainer>
