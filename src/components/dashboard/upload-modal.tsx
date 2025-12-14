@@ -28,7 +28,6 @@ const brokers: { id: BrokerType; name: string; logo: string }[] = [
 
 const supportedFormats = [
   { ext: "CSV", icon: FileSpreadsheet, color: "text-chart-1" },
-  { ext: "JSON", icon: FileText, color: "text-chart-2" },
 ];
 
 type UploadState = "idle" | "dragging" | "uploading" | "success" | "error";
@@ -69,11 +68,10 @@ export function UploadModal({ isOpen, onClose, onUploadComplete, portfolioId }: 
   };
 
   const validateAndSetFile = (file: File) => {
-    const validExtensions = [".csv", ".json"];
     const fileExt = file.name.toLowerCase().substring(file.name.lastIndexOf("."));
     
-    if (!validExtensions.includes(fileExt)) {
-      setErrorMessage("Invalid file format. Please upload a CSV or JSON file.");
+    if (fileExt !== ".csv") {
+      setErrorMessage("Invalid file format. Please upload a CSV file.");
       setUploadState("error");
       return;
     }
@@ -201,7 +199,7 @@ export function UploadModal({ isOpen, onClose, onUploadComplete, portfolioId }: 
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".csv,.json"
+                  accept=".csv"
                   onChange={handleFileSelect}
                   className="hidden"
                 />

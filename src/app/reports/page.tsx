@@ -2,11 +2,10 @@
 
 import * as React from "react";
 import { motion } from "framer-motion";
+import Link from "next/link";
 import {
   FileText,
   Upload,
-  Trash2,
-  Eye,
   RefreshCw,
   Search,
   ChevronRight,
@@ -36,9 +35,11 @@ import { formatDate, formatRelativeTime } from "@/lib/utils";
 import { reportsApi, type ReportResponseDto, type BrokerType } from "@/lib/api";
 import { usePortfolio } from "@/providers";
 
-const brokerConfig: Record<BrokerType, { name: string; logo: string; color: string }> = {
+const brokerConfig: Record<string, { name: string; logo: string; color: string }> = {
   ibkr: { name: "Interactive Brokers", logo: "IBKR", color: "bg-red-500/20 text-red-400" },
 };
+
+const defaultBroker = { name: "Unknown", logo: "?", color: "bg-muted text-muted-foreground" };
 
 export default function ReportsPage() {
   const { activePortfolio, isLoading: isPortfolioLoading } = usePortfolio();
@@ -91,7 +92,7 @@ export default function ReportsPage() {
   const filteredReports = reports.filter(
     (report) =>
       report.fileName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      brokerConfig[report.broker].name.toLowerCase().includes(searchQuery.toLowerCase())
+      (brokerConfig[report.broker] || defaultBroker).name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const totalPages = Math.ceil(filteredReports.length / pageSize);
@@ -99,18 +100,6 @@ export default function ReportsPage() {
     (currentPage - 1) * pageSize,
     currentPage * pageSize
   );
-
-  const handleDelete = async (reportId: string) => {
-    if (!activePortfolio) return;
-
-    try {
-      await reportsApi.delete(activePortfolio.id, reportId);
-      setReports((prev) => prev.filter((r) => r.id !== reportId));
-    } catch (err) {
-      const error = err as Error;
-      setError(error.message || "Failed to delete report");
-    }
-  };
 
   const statusCounts = {
     total: reports.length,
@@ -195,7 +184,7 @@ export default function ReportsPage() {
                         <h3 className="font-semibold">Manual Upload</h3>
                       </div>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        Upload CSV or JSON broker statements
+                        Upload CSV broker statements
                       </p>
                     </div>
                   </div>
@@ -206,7 +195,13 @@ export default function ReportsPage() {
                 </div>
                 <div className="border-t border-border bg-tertiary/50 px-5 py-3">
                   <p className="text-xs text-muted-foreground">
-                    Supports Interactive Brokers export formats
+                    Supports Interactive Brokers Activity Statement CSV.{" "}
+                    <Link
+                      href="/guides/activity-statement"
+                      className="inline-flex items-center gap-1 text-primary hover:underline"
+                    >
+                      How to download
+                    </Link>
                   </p>
                 </div>
               </CardContent>
@@ -331,14 +326,11 @@ export default function ReportsPage() {
                         <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                           Uploaded
                         </th>
-                        <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                          Actions
-                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
                       {paginatedReports.map((report, index) => {
-                        const broker = brokerConfig[report.broker];
+                        const broker = brokerConfig[report.broker] || defaultBroker;
                         
                         return (
                           <motion.tr
@@ -403,31 +395,6 @@ export default function ReportsPage() {
                                 <p className="text-xs text-muted-foreground">
                                   {formatRelativeTime(report.createdAt)}
                                 </p>
-                              </div>
-                            </td>
-
-                            {/* Actions */}
-                            <td className="whitespace-nowrap px-6 py-4 text-right">
-                              <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                                {report.status === "completed" && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8"
-                                    title="View"
-                                  >
-                                    <Eye className="h-4 w-4" />
-                                  </Button>
-                                )}
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                  title="Delete"
-                                  onClick={() => handleDelete(report.id)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
                               </div>
                             </td>
                           </motion.tr>

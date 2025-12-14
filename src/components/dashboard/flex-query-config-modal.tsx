@@ -190,12 +190,12 @@ export function FlexQueryConfigModal({
       <p className="text-center text-xs text-muted-foreground">
         Need help?{" "}
         <a
-          href="https://www.interactivebrokers.com/en/software/am/am/reports/activityflexqueries.htm"
+          href="/guides/flex-query"
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1 text-primary hover:underline"
         >
-          View IBKR documentation
+          View setup guide
           <ExternalLink className="h-3 w-3" />
         </a>
       </p>

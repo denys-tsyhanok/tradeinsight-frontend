@@ -9,11 +9,11 @@ import {
   AlertCircle,
   Clock,
   RefreshCw,
-  ExternalLink,
   Trash2,
   Loader2,
   X,
 } from "lucide-react";
+import Link from "next/link";
 import { Card, CardContent, Button } from "@/components/ui";
 import { cn, formatRelativeTime } from "@/lib/utils";
 import { flexQueryApi, type FlexQueryCredentialsDto } from "@/lib/api";
@@ -225,15 +225,12 @@ export function FlexQueryCard({
             <div className="border-t border-border bg-tertiary/50 px-5 py-3">
               <p className="text-xs text-muted-foreground">
                 Connect your Interactive Brokers account to automatically sync trades, dividends, and transfers.{" "}
-                <a
-                  href="https://www.interactivebrokers.com/en/software/am/am/reports/activityflexqueries.htm"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-primary hover:underline"
+                <Link
+                  href="/guides/flex-query"
+                  className="text-primary hover:underline"
                 >
                   Learn more
-                  <ExternalLink className="h-3 w-3" />
-                </a>
+                </Link>
               </p>
             </div>
           )}
