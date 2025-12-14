@@ -117,9 +117,9 @@ export default function HomePage() {
 
   // Tab content for interactive stock details
   const stockDetailsTabs = [
-    { label: "Overview", image: "/application/q_buys.jpeg" },
-    { label: "Buys by Quarter", image: "/application/q_buys.jpeg" },
-    { label: "Transactions", image: "/application/q_buys.jpeg" },
+    { label: "Overview", image: "/application/stock_overview.jpeg" },
+    { label: "Buys by Quarter", image: "/application/chart_buys.jpeg" },
+    { label: "Transactions", image: "/application/transaction.jpeg" },
   ];
 
   return (
@@ -481,8 +481,8 @@ export default function HomePage() {
           >
             <div className="rounded-xl border border-border/50 bg-card/30 p-2 shadow-2xl overflow-hidden">
               <Image
-                src="/application/holdings.png"
-                alt="Holdings Table"
+                src="/application/profit.png"
+                alt="Profit breakdown by position"
                 width={1920}
                 height={1080}
                 className="rounded-lg w-full h-auto"
