@@ -52,7 +52,7 @@ export function HoldingsTable({ holdings, portfolioId, isLoading }: HoldingsTabl
   const [pageSize, setPageSize] = React.useState<number | "all">(10);
   const [marketPrices, setMarketPrices] = React.useState<Record<string, LatestPriceDto>>({});
   const [isLoadingPrices, setIsLoadingPrices] = React.useState(false);
-
+  
   const pageSizeOptions: (number | "all")[] = [10, 25, 50, "all"];
 
   // Fetch market prices for day change
@@ -422,8 +422,8 @@ export function HoldingsTable({ holdings, portfolioId, isLoading }: HoldingsTabl
                     <SortIcon field="symbol" />
                   </div>
                 </th>
-                <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Status
+                <th className="px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Qty
                 </th>
 
                 {tableMode === "holdings" ? (
@@ -588,21 +588,9 @@ export function HoldingsTable({ holdings, portfolioId, isLoading }: HoldingsTabl
                         </div>
                       </td>
 
-                      {/* Status */}
-                      <td className="px-3 py-3">
-                        <Badge className={cn("gap-1", status.color)}>
-                          <span
-                            className={cn(
-                              "h-1.5 w-1.5 rounded-full",
-                              holding.status === "open"
-                                ? "bg-success"
-                                : holding.status === "closed"
-                                ? "bg-muted-foreground"
-                                : "bg-destructive"
-                            )}
-                          />
-                          {status.label}
-                        </Badge>
+                      {/* Quantity */}
+                      <td className="px-3 py-3 text-right font-medium">
+                        {holding.quantity.toLocaleString()}
                       </td>
 
                       {tableMode === "holdings" ? (

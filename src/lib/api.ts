@@ -857,6 +857,21 @@ export interface LatestPriceDto {
 }
 
 // ============================================================================
+// Logo Types
+// ============================================================================
+
+export interface LogoResponseDto {
+  symbol: string;
+  logoUrl: string | null;
+}
+
+export interface LogoBatchResponseDto {
+  data: Record<string, string>;
+  missing: string[];
+  timestamp: string;
+}
+
+// ============================================================================
 // Market Data API
 // ============================================================================
 
@@ -918,6 +933,15 @@ export const marketDataApi = {
     return fetchApi<LatestPriceDto[]>(
       `/market/prices/latest?symbols=${symbols.join(",")}`
     );
+  },
+
+  getLogo: async (symbol: string): Promise<LogoResponseDto> => {
+    return fetchApi<LogoResponseDto>(`/market/logos/${encodeURIComponent(symbol.toUpperCase())}`);
+  },
+
+  getLogos: async (symbols: string[]): Promise<LogoBatchResponseDto> => {
+    const symbolList = symbols.map(s => s.toUpperCase()).join(",");
+    return fetchApi<LogoBatchResponseDto>(`/market/logos?symbols=${symbolList}`);
   },
 };
 

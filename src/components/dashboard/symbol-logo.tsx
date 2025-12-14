@@ -21,7 +21,7 @@ const paddingClasses = {
   lg: "p-2",
 };
 
-// Logo source
+// Direct logo URL - no API needed, browser handles caching
 const getLogoUrl = (symbol: string): string => {
   return `https://assets.parqet.com/logos/symbol/${encodeURIComponent(symbol.toUpperCase())}`;
 };
@@ -36,7 +36,6 @@ export function SymbolLogo({ symbol, size = "md", className }: SymbolLogoProps) 
 
   const logoUrl = getLogoUrl(symbol);
   const showLogo = status === "loaded";
-  const showFallback = status === "error" || status === "loading";
 
   return (
     <div
@@ -58,7 +57,7 @@ export function SymbolLogo({ symbol, size = "md", className }: SymbolLogoProps) 
         {symbol.slice(0, 2).toUpperCase()}
       </span>
 
-      {/* Logo image */}
+      {/* Logo image - browser handles loading and caching */}
       <img
         key={symbol}
         src={logoUrl}
@@ -74,4 +73,3 @@ export function SymbolLogo({ symbol, size = "md", className }: SymbolLogoProps) 
     </div>
   );
 }
-
