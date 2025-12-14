@@ -20,7 +20,7 @@ import {
 import Link from "next/link";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
 import { Card, CardContent, Button, Badge } from "@/components/ui";
-import { portfoliosApi, marketDataApi, type BreakdownHoldingDto, type HoldingTransactionsResponseDto, type LatestPriceDto } from "@/lib/api";
+import { portfoliosApi, marketDataApi, type BreakdownHoldingDto, type HoldingTransactionsResponseDto, type LatestPriceDataDto } from "@/lib/api";
 import { SymbolLogo } from "./symbol-logo";
 
 interface HoldingsTableProps {
@@ -50,7 +50,7 @@ export function HoldingsTable({ holdings, portfolioId, isLoading }: HoldingsTabl
   const [transactionsCache, setTransactionsCache] = React.useState<Record<string, HoldingTransactionsResponseDto>>({});
   const [loadingTransactions, setLoadingTransactions] = React.useState<string | null>(null);
   const [pageSize, setPageSize] = React.useState<number | "all">(10);
-  const [marketPrices, setMarketPrices] = React.useState<Record<string, LatestPriceDto>>({});
+  const [marketPrices, setMarketPrices] = React.useState<Record<string, LatestPriceDataDto>>({});
   const [isLoadingPrices, setIsLoadingPrices] = React.useState(false);
   
   const pageSizeOptions: (number | "all")[] = [10, 25, 50, "all"];
@@ -65,15 +65,10 @@ export function HoldingsTable({ holdings, portfolioId, isLoading }: HoldingsTabl
       setIsLoadingPrices(true);
       
       try {
-        const prices = await marketDataApi.getLatestPrices(symbols);
-        if (Array.isArray(prices)) {
-          const priceMap: Record<string, LatestPriceDto> = {};
-          prices.forEach((p) => {
-            if (p && p.symbol) {
-              priceMap[p.symbol] = p;
-            }
-          });
-          setMarketPrices(priceMap);
+        const response = await marketDataApi.getLatestPrices(symbols);
+        // Response format: { data: { SYMBOL: { price, change, changePercent, ... } }, missing: [], stale: [] }
+        if (response && response.data) {
+          setMarketPrices(response.data);
         }
       } catch (error) {
         // Market data API might not be available - fail silently

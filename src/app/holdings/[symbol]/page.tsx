@@ -689,6 +689,18 @@ function DividendsTable({
   );
 }
 
+// Helper function to calculate holding period
+function calculateHoldingPeriod(acquiredAt: string): { days: number; isLongTerm: boolean } {
+  const acquired = new Date(acquiredAt);
+  const today = new Date();
+  const diffTime = today.getTime() - acquired.getTime();
+  const days = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  return {
+    days: Math.max(0, days),
+    isLongTerm: days > 365,
+  };
+}
+
 // Lots Table Component
 function LotsTable({
   lots,
@@ -800,22 +812,25 @@ function LotsTable({
                   )}
                 </td>
                 <td className="px-6 py-4">
-                  <div className="flex items-center gap-2">
-                    {lot.holdingPeriodDays !== undefined && (
-                      <span className="text-sm text-muted-foreground">
-                        {lot.holdingPeriodDays} days
-                      </span>
-                    )}
-                    {lot.isLongTerm ? (
-                      <Badge variant="success" className="text-xs">
-                        Long-Term
-                      </Badge>
-                    ) : (
-                      <Badge variant="warning" className="text-xs">
-                        Short-Term
-                      </Badge>
-                    )}
-                  </div>
+                  {(() => {
+                    const { days, isLongTerm } = calculateHoldingPeriod(lot.acquiredAt);
+                    return (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">
+                          {days} {days === 1 ? "day" : "days"}
+                        </span>
+                        {isLongTerm ? (
+                          <Badge variant="success" className="text-xs">
+                            Long-Term
+                          </Badge>
+                        ) : (
+                          <Badge variant="warning" className="text-xs">
+                            Short-Term
+                          </Badge>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </td>
               </motion.tr>
             ))}

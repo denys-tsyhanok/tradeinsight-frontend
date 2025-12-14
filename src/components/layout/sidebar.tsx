@@ -11,7 +11,6 @@ import {
   BarChart3,
   Coins,
   Receipt,
-  Settings,
   ChevronLeft,
   ChevronRight,
   Sparkles,
@@ -38,7 +37,6 @@ const navItems: NavItem[] = [
   { href: "/dividends", label: "Dividends", icon: Coins },
   { href: "/transfers", label: "Transfers", icon: ArrowLeftRight },
   { href: "/reports", label: "Reports", icon: FileText },
-  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 interface SidebarProps {
@@ -251,13 +249,6 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
                 transition={{ duration: 0.15 }}
                 className="absolute bottom-full left-0 right-0 mb-2 overflow-hidden rounded-lg border border-border bg-card shadow-elevated"
               >
-                <Link
-                  href="/settings"
-                  className="flex w-full items-center gap-2 px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-tertiary hover:text-foreground"
-                >
-                  <Settings className="h-4 w-4" />
-                  Account Settings
-                </Link>
                 <button
                   onClick={logout}
                   className="flex w-full items-center gap-2 px-3 py-2 text-sm text-destructive transition-colors hover:bg-destructive/10"

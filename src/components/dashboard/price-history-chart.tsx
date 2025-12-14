@@ -451,6 +451,20 @@ export function PriceHistoryChart({
                   <span className="text-sm">{error}</span>
                 </div>
               </motion.div>
+            ) : data.length === 0 ? (
+              <motion.div
+                key="empty"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex items-center justify-center h-96"
+              >
+                <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                  <Activity className="h-8 w-8" />
+                  <span className="text-sm">No price data available for {symbol}</span>
+                  <span className="text-xs">Historical prices may not be available for this symbol</span>
+                </div>
+              </motion.div>
             ) : (
               <motion.div
                 key="chart"

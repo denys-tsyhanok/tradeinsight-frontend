@@ -193,7 +193,7 @@ export default function ReportsPage() {
                     Upload File
                   </Button>
                 </div>
-                <div className="border-t border-border bg-tertiary/50 px-5 py-3">
+                <div className="rounded-b-xl border-t border-border bg-tertiary/50 px-5 py-3">
                   <p className="text-xs text-muted-foreground">
                     Supports Interactive Brokers Activity Statement CSV.{" "}
                     <Link

@@ -856,6 +856,26 @@ export interface LatestPriceDto {
   updatedAt: string;
 }
 
+export interface LatestPriceDataDto {
+  price: number;
+  change: number;
+  changePercent: number;
+  previousClose: number;
+  open: number;
+  high: number;
+  low: number;
+  volume: number;
+  marketCap?: number;
+  fetchedAt: string;
+}
+
+export interface LatestPricesBatchResponseDto {
+  data: Record<string, LatestPriceDataDto>;
+  missing: string[];
+  stale: string[];
+  timestamp: string;
+}
+
 // ============================================================================
 // Logo Types
 // ============================================================================
@@ -929,8 +949,8 @@ export const marketDataApi = {
     return fetchApi<LatestPriceDto>(`/market/prices/latest/${symbol}`);
   },
 
-  getLatestPrices: async (symbols: string[]): Promise<LatestPriceDto[]> => {
-    return fetchApi<LatestPriceDto[]>(
+  getLatestPrices: async (symbols: string[]): Promise<LatestPricesBatchResponseDto> => {
+    return fetchApi<LatestPricesBatchResponseDto>(
       `/market/prices/latest?symbols=${symbols.join(",")}`
     );
   },

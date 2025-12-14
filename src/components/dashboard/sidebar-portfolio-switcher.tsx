@@ -21,6 +21,7 @@ import {
   DialogDescription,
   Input,
 } from "@/components/ui";
+import { portfoliosApi } from "@/lib/api";
 
 interface SidebarPortfolioSwitcherProps {
   collapsed?: boolean;
@@ -34,6 +35,39 @@ export function SidebarPortfolioSwitcher({ collapsed = false }: SidebarPortfolio
     setActivePortfolio,
     createPortfolio,
   } = usePortfolio();
+
+  const [currentHoldingsCount, setCurrentHoldingsCount] = React.useState<number | null>(null);
+
+  // Fetch breakdown to get accurate open holdings count
+  React.useEffect(() => {
+    if (!activePortfolio) {
+      setCurrentHoldingsCount(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchBreakdown = async () => {
+      try {
+        const breakdown = await portfoliosApi.getBreakdown(activePortfolio.id);
+        if (!cancelled) {
+          const openCount = breakdown.holdings?.filter((h) => h.status === "open").length ?? 0;
+          setCurrentHoldingsCount(openCount);
+        }
+      } catch {
+        // Fall back to summary count if breakdown fails
+        if (!cancelled) {
+          setCurrentHoldingsCount(activePortfolio.summary.holdingCount);
+        }
+      }
+    };
+
+    fetchBreakdown();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activePortfolio]);
 
   const [isOpen, setIsOpen] = React.useState(false);
   const [isCreateOpen, setIsCreateOpen] = React.useState(false);
@@ -226,7 +260,7 @@ export function SidebarPortfolioSwitcher({ collapsed = false }: SidebarPortfolio
                     {activePortfolio.name}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    {activePortfolio.summary.holdingCount} holdings
+                    {currentHoldingsCount ?? activePortfolio.summary.holdingCount} holdings
                   </span>
                 </div>
                 <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground" />

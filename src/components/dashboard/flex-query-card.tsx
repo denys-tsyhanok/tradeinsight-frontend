@@ -215,14 +215,14 @@ export function FlexQueryCard({
 
           {/* Error banner */}
           {error && (
-            <div className="border-t border-destructive/20 bg-destructive/5 px-5 py-3">
+            <div className="rounded-b-xl border-t border-destructive/20 bg-destructive/5 px-5 py-3">
               <p className="text-sm text-destructive">{error}</p>
             </div>
           )}
 
           {/* Info banner for not configured */}
           {!credentials?.configured && (
-            <div className="border-t border-border bg-tertiary/50 px-5 py-3">
+            <div className="rounded-b-xl border-t border-border bg-tertiary/50 px-5 py-3">
               <p className="text-xs text-muted-foreground">
                 Connect your Interactive Brokers account to automatically sync trades, dividends, and transfers.{" "}
                 <Link

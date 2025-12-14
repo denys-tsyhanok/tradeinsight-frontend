@@ -27,7 +27,7 @@ import {
   Input,
   Badge,
 } from "@/components/ui";
-import { SymbolLogo } from "@/components/dashboard";
+import { SymbolLogo, MetricCard } from "@/components/dashboard";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
 import {
   tradesApi,
@@ -293,55 +293,32 @@ export default function TransactionsPage() {
         )}
 
         {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-4">
-          {[
-            {
-              label: "Total Trades",
-              value: stats.total.toString(),
-              subtext: `${stats.buys} buys, ${stats.sells} sells`,
-              icon: Receipt,
-            },
-            {
-              label: "Total Bought",
-              value: formatCurrency(stats.totalBought),
-              icon: TrendingUp,
-              color: "text-success",
-            },
-            {
-              label: "Total Sold",
-              value: formatCurrency(stats.totalSold),
-              icon: TrendingDown,
-              color: "text-destructive",
-            },
-            {
-              label: "Commissions Paid",
-              value: formatCurrency(stats.totalCommissions),
-              icon: Receipt,
-              color: "text-muted-foreground",
-            },
-          ].map((stat, index) => (
-            <motion.div
-              key={stat.label}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-            >
-              <Card className="border-border/50">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2">
-                    <stat.icon className="h-4 w-4 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">{stat.label}</p>
-                  </div>
-                  <p className={cn("mt-1 text-2xl font-bold", stat.color)}>
-                    {isLoading ? "—" : stat.value}
-                  </p>
-                  {stat.subtext && (
-                    <p className="text-xs text-muted-foreground">{stat.subtext}</p>
-                  )}
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
+        <div className="dashboard-grid">
+          <MetricCard
+            label="Total Trades"
+            value={stats.total}
+            format="number"
+            icon={Receipt}
+            delay={1}
+          />
+          <MetricCard
+            label="Total Bought"
+            value={stats.totalBought}
+            icon={TrendingUp}
+            delay={2}
+          />
+          <MetricCard
+            label="Total Sold"
+            value={stats.totalSold}
+            icon={TrendingDown}
+            delay={3}
+          />
+          <MetricCard
+            label="Commissions Paid"
+            value={stats.totalCommissions}
+            icon={Receipt}
+            delay={4}
+          />
         </div>
 
         {/* Filters */}
