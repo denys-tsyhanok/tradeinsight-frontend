@@ -96,6 +96,10 @@ function formatChartDate(dateStr: string, range: TimeRange): string {
   return date.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
 }
 
+function getTransferAmountUsd(transfer: TransferResponseDto): number {
+  return transfer.amountUsd ?? transfer.amount;
+}
+
 function groupTransfersByMonth(
   transfers: TransferResponseDto[],
   startDate: Date | null,
@@ -116,11 +120,12 @@ function groupTransfersByMonth(
       monthMap.set(monthKey, { deposits: 0, withdrawals: 0 });
     }
 
+    const amountUsd = getTransferAmountUsd(transfer);
     const entry = monthMap.get(monthKey)!;
     if (transfer.type === "deposit") {
-      entry.deposits += transfer.amount;
+      entry.deposits += amountUsd;
     } else if (transfer.type === "withdrawal") {
-      entry.withdrawals += Math.abs(transfer.amount);
+      entry.withdrawals += Math.abs(amountUsd);
     }
   });
 
@@ -381,14 +386,14 @@ export default function TransfersPage() {
     };
   }, [chartData]);
 
-  // KPI totals (calculated from actual transfer data)
+  // KPI totals (calculated from actual transfer data, normalized to USD)
   const kpiTotals = React.useMemo(() => {
     const deposits = transfers
       .filter((t) => t.type === "deposit")
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + getTransferAmountUsd(t), 0);
     const withdrawals = transfers
       .filter((t) => t.type === "withdrawal")
-      .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+      .reduce((sum, t) => sum + Math.abs(getTransferAmountUsd(t)), 0);
     const count = transfers.length;
 
     return {
@@ -409,13 +414,15 @@ export default function TransfersPage() {
   const handleExport = () => {
     if (filteredTransfers.length === 0) return;
 
-    const headers = ["Date", "Type", "Broker", "Amount", "Currency", "Description"];
+    const headers = ["Date", "Type", "Broker", "Amount", "Currency", "Amount (USD)", "FX Rate", "Description"];
     const rows = filteredTransfers.map((t) => [
       formatDate(t.executedAt),
       getTransferLabel(t.type),
       getBrokerLabel(t.broker),
       t.amount,
       t.currency,
+      t.amountUsd ?? "",
+      t.fxRate ?? "",
       t.description || "",
     ]);
 
@@ -961,8 +968,13 @@ export default function TransfersPage() {
                           <div className="text-right">
                             <p className={cn("font-semibold", colorClass)}>
                               {isInflow ? "+" : "-"}
-                              {formatCurrency(Math.abs(transfer.amount))}
+                              {formatCurrency(Math.abs(transfer.amount), transfer.currency)}
                             </p>
+                            {transfer.currency !== "USD" && transfer.amountUsd != null && (
+                              <p className="text-xs text-muted-foreground">
+                                ~{formatCurrency(Math.abs(transfer.amountUsd))}
+                              </p>
+                            )}
                             <p className="text-xs text-muted-foreground">
                               {formatDate(transfer.executedAt)}
                             </p>

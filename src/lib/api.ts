@@ -440,6 +440,8 @@ export interface TransferResponseDto {
   currency: string;
   executedAt: string;
   description?: string;
+  amountUsd?: number;
+  fxRate?: number;
   broker: BrokerType;
   source: DataSource;
 }
