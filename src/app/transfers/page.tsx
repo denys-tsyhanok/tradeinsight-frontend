@@ -103,7 +103,8 @@ function getTransferAmountUsd(transfer: TransferResponseDto): number {
 function groupTransfersByMonth(
   transfers: TransferResponseDto[],
   startDate: Date | null,
-  range: TimeRange
+  range: TimeRange,
+  useUsd: boolean
 ): ChartDataPoint[] {
   const monthMap = new Map<string, { deposits: number; withdrawals: number }>();
 
@@ -120,12 +121,12 @@ function groupTransfersByMonth(
       monthMap.set(monthKey, { deposits: 0, withdrawals: 0 });
     }
 
-    const amountUsd = getTransferAmountUsd(transfer);
+    const amount = useUsd ? getTransferAmountUsd(transfer) : transfer.amount;
     const entry = monthMap.get(monthKey)!;
     if (transfer.type === "deposit") {
-      entry.deposits += amountUsd;
+      entry.deposits += amount;
     } else if (transfer.type === "withdrawal") {
-      entry.withdrawals += Math.abs(amountUsd);
+      entry.withdrawals += Math.abs(amount);
     }
   });
 
@@ -147,16 +148,19 @@ const CustomTooltip = ({
   payload,
   showDeposits = true,
   showWithdrawals = true,
+  useUsd = true,
 }: {
   active?: boolean;
   payload?: Array<{ payload: ChartDataPoint }>;
   showDeposits?: boolean;
   showWithdrawals?: boolean;
+  useUsd?: boolean;
 }) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     const displayedNet = (showDeposits ? data.deposits : 0) - (showWithdrawals ? data.withdrawals : 0);
     const hasMultipleVisible = showDeposits && showWithdrawals;
+    const fmt = (v: number) => useUsd ? formatCurrency(v) : v.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 
     return (
       <motion.div
@@ -178,7 +182,7 @@ const CustomTooltip = ({
                 Deposits
               </span>
               <span className="text-sm font-semibold text-success">
-                +{formatCurrency(data.deposits)}
+                +{fmt(data.deposits)}
               </span>
             </div>
           )}
@@ -189,7 +193,7 @@ const CustomTooltip = ({
                 Withdrawals
               </span>
               <span className="text-sm font-semibold text-destructive">
-                -{formatCurrency(data.withdrawals)}
+                -{fmt(data.withdrawals)}
               </span>
             </div>
           )}
@@ -203,7 +207,7 @@ const CustomTooltip = ({
                 )}
               >
                 {displayedNet >= 0 ? "+" : ""}
-                {formatCurrency(displayedNet)}
+                {fmt(displayedNet)}
               </span>
             </div>
           )}
@@ -306,6 +310,7 @@ export default function TransfersPage() {
   const [showDeposits, setShowDeposits] = React.useState(true);
   const [showWithdrawals, setShowWithdrawals] = React.useState(true);
   const [brokerFilter, setBrokerFilter] = React.useState<BrokerFilter>("all");
+  const [showUsd, setShowUsd] = React.useState(false);
   const pageSize = 10;
 
   // Fetch transfers
@@ -364,11 +369,11 @@ export default function TransfersPage() {
   const chartData = React.useMemo(() => {
     const startDate = getStartDateForRange(selectedRange);
     // Apply broker filter to chart data
-    const filteredForChart = brokerFilter === "all" 
-      ? transfers 
+    const filteredForChart = brokerFilter === "all"
+      ? transfers
       : transfers.filter((t) => t.broker === brokerFilter);
-    return groupTransfersByMonth(filteredForChart, startDate, selectedRange);
-  }, [transfers, selectedRange, brokerFilter]);
+    return groupTransfersByMonth(filteredForChart, startDate, selectedRange, showUsd);
+  }, [transfers, selectedRange, brokerFilter, showUsd]);
 
   // Chart stats
   const chartStats = React.useMemo(() => {
@@ -386,14 +391,14 @@ export default function TransfersPage() {
     };
   }, [chartData]);
 
-  // KPI totals (calculated from actual transfer data, normalized to USD)
+  // KPI totals (calculated from actual transfer data)
   const kpiTotals = React.useMemo(() => {
     const deposits = transfers
       .filter((t) => t.type === "deposit")
-      .reduce((sum, t) => sum + getTransferAmountUsd(t), 0);
+      .reduce((sum, t) => sum + (showUsd ? getTransferAmountUsd(t) : t.amount), 0);
     const withdrawals = transfers
       .filter((t) => t.type === "withdrawal")
-      .reduce((sum, t) => sum + Math.abs(getTransferAmountUsd(t)), 0);
+      .reduce((sum, t) => sum + Math.abs(showUsd ? getTransferAmountUsd(t) : t.amount), 0);
     const count = transfers.length;
 
     return {
@@ -401,7 +406,7 @@ export default function TransfersPage() {
       totalWithdrawals: withdrawals,
       count,
     };
-  }, [transfers]);
+  }, [transfers, showUsd]);
 
   // Pagination
   const totalPages = Math.ceil(filteredTransfers.length / pageSize);
@@ -528,12 +533,14 @@ export default function TransfersPage() {
           <MetricCard
             label="Total Deposits"
             value={kpiTotals.totalDeposits}
+            format={showUsd ? "currency" : "number"}
             icon={ArrowDownToLine}
             delay={1}
           />
           <MetricCard
             label="Total Withdrawals"
             value={kpiTotals.totalWithdrawals}
+            format={showUsd ? "currency" : "number"}
             icon={ArrowUpFromLine}
             delay={2}
           />
@@ -574,7 +581,7 @@ export default function TransfersPage() {
                           )}
                         >
                           Net: {chartStats.isPositive ? "+" : ""}
-                          {formatCurrency(chartStats.netFlow)}
+                          {showUsd ? formatCurrency(chartStats.netFlow) : chartStats.netFlow.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                         </span>
                       </div>
                     )}
@@ -660,7 +667,7 @@ export default function TransfersPage() {
                                 Deposits
                               </p>
                               <p className="text-lg font-semibold text-success">
-                                +{formatCurrency(chartStats.totalDeposits)}
+                                +{showUsd ? formatCurrency(chartStats.totalDeposits) : chartStats.totalDeposits.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                               </p>
                             </div>
                           )}
@@ -670,7 +677,7 @@ export default function TransfersPage() {
                                 Withdrawals
                               </p>
                               <p className="text-lg font-semibold text-destructive">
-                                -{formatCurrency(chartStats.totalWithdrawals)}
+                                -{showUsd ? formatCurrency(chartStats.totalWithdrawals) : chartStats.totalWithdrawals.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                               </p>
                             </div>
                           )}
@@ -810,12 +817,14 @@ export default function TransfersPage() {
                               fontSize: 11,
                             }}
                             tickFormatter={(value: number) =>
-                              `$${(value / 1000).toFixed(0)}k`
+                              showUsd
+                                ? `$${(value / 1000).toFixed(0)}k`
+                                : `${(value / 1000).toFixed(0)}k`
                             }
                             width={55}
                             tickMargin={8}
                           />
-                          <Tooltip content={<CustomTooltip showDeposits={showDeposits} showWithdrawals={showWithdrawals} />} />
+                          <Tooltip content={<CustomTooltip showDeposits={showDeposits} showWithdrawals={showWithdrawals} useUsd={showUsd} />} />
                           {showDeposits && (
                             <Bar
                               dataKey="deposits"
@@ -886,6 +895,31 @@ export default function TransfersPage() {
                 {type.label}
               </button>
             ))}
+          </div>
+
+          <div className="flex gap-1 rounded-lg bg-tertiary p-1">
+            <button
+              onClick={() => setShowUsd(false)}
+              className={cn(
+                "rounded-md px-3 py-1.5 text-sm font-medium transition-all",
+                !showUsd
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Original
+            </button>
+            <button
+              onClick={() => setShowUsd(true)}
+              className={cn(
+                "rounded-md px-3 py-1.5 text-sm font-medium transition-all",
+                showUsd
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              USD
+            </button>
           </div>
         </motion.div>
 
@@ -966,14 +1000,30 @@ export default function TransfersPage() {
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className={cn("font-semibold", colorClass)}>
-                              {isInflow ? "+" : "-"}
-                              {formatCurrency(Math.abs(transfer.amount), transfer.currency)}
-                            </p>
-                            {transfer.currency !== "USD" && transfer.amountUsd != null && (
-                              <p className="text-xs text-muted-foreground">
-                                ~{formatCurrency(Math.abs(transfer.amountUsd))}
-                              </p>
+                            {showUsd ? (
+                              <>
+                                <p className={cn("font-semibold", colorClass)}>
+                                  {isInflow ? "+" : "-"}
+                                  {formatCurrency(Math.abs(transfer.amountUsd ?? transfer.amount))}
+                                </p>
+                                {transfer.currency !== "USD" && (
+                                  <p className="text-xs text-muted-foreground">
+                                    {formatCurrency(Math.abs(transfer.amount), transfer.currency)}
+                                  </p>
+                                )}
+                              </>
+                            ) : (
+                              <>
+                                <p className={cn("font-semibold", colorClass)}>
+                                  {isInflow ? "+" : "-"}
+                                  {formatCurrency(Math.abs(transfer.amount), transfer.currency)}
+                                </p>
+                                {transfer.currency !== "USD" && transfer.amountUsd != null && (
+                                  <p className="text-xs text-muted-foreground">
+                                    ~{formatCurrency(Math.abs(transfer.amountUsd))}
+                                  </p>
+                                )}
+                              </>
                             )}
                             <p className="text-xs text-muted-foreground">
                               {formatDate(transfer.executedAt)}
@@ -1041,7 +1091,7 @@ export default function TransfersPage() {
                       Total Deposited
                     </p>
                     <p className="text-2xl font-bold text-success">
-                      +{formatCurrency(summary.totalDeposits)}
+                      +{showUsd ? formatCurrency(summary.totalDeposits) : kpiTotals.totalDeposits.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                     </p>
                   </div>
                   <div>
@@ -1049,7 +1099,7 @@ export default function TransfersPage() {
                       Total Withdrawn
                     </p>
                     <p className="text-2xl font-bold text-destructive">
-                      -{formatCurrency(summary.totalWithdrawals)}
+                      -{showUsd ? formatCurrency(summary.totalWithdrawals) : kpiTotals.totalWithdrawals.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                     </p>
                   </div>
                   <div>
@@ -1057,13 +1107,22 @@ export default function TransfersPage() {
                     <p
                       className={cn(
                         "text-2xl font-bold",
-                        summary.netTransfers >= 0
+                        (showUsd ? summary.netTransfers : kpiTotals.totalDeposits - kpiTotals.totalWithdrawals) >= 0
                           ? "text-success"
                           : "text-destructive"
                       )}
                     >
-                      {summary.netTransfers >= 0 ? "+" : ""}
-                      {formatCurrency(summary.netTransfers)}
+                      {showUsd ? (
+                        <>
+                          {summary.netTransfers >= 0 ? "+" : ""}
+                          {formatCurrency(summary.netTransfers)}
+                        </>
+                      ) : (
+                        <>
+                          {kpiTotals.totalDeposits - kpiTotals.totalWithdrawals >= 0 ? "+" : ""}
+                          {(kpiTotals.totalDeposits - kpiTotals.totalWithdrawals).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                        </>
+                      )}
                     </p>
                   </div>
                   <div>
