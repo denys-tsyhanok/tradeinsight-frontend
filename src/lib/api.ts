@@ -354,6 +354,8 @@ export interface TradeResponseDto {
   description?: string;
   commission?: number;
   source: DataSource;
+  realizedPnl?: number;
+  costBasis?: number;
 }
 
 export interface TradeSummaryDto {
@@ -363,6 +365,7 @@ export interface TradeSummaryDto {
   totalBought: number;
   totalSold: number;
   totalCommissions: number;
+  totalRealizedPnl?: number;
 }
 
 export interface TradeListResponseDto {

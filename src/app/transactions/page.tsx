@@ -161,6 +161,7 @@ export default function TransactionsPage() {
   const stats = React.useMemo(() => {
     const buyTrades = trades.filter((t) => t.type === "buy");
     const sellTrades = trades.filter((t) => t.type === "sell");
+    const totalRealizedPnl = sellTrades.reduce((sum, t) => sum + (t.realizedPnl ?? 0), 0);
 
     return {
       total: trades.length,
@@ -169,6 +170,8 @@ export default function TransactionsPage() {
       totalBought: buyTrades.reduce((sum, t) => sum + t.amount, 0),
       totalSold: sellTrades.reduce((sum, t) => sum + t.amount, 0),
       totalCommissions: trades.reduce((sum, t) => sum + (t.commission || 0), 0),
+      totalRealizedPnl,
+      hasRealizedPnl: sellTrades.some((t) => t.realizedPnl != null),
     };
   }, [trades]);
 
@@ -186,7 +189,7 @@ export default function TransactionsPage() {
   const handleExport = () => {
     if (filteredTrades.length === 0) return;
 
-    const headers = ["Date", "Type", "Symbol", "Quantity", "Price", "Amount", "Commission"];
+    const headers = ["Date", "Type", "Symbol", "Quantity", "Price", "Amount", "Realized P&L", "Cost Basis", "Commission"];
     const rows = filteredTrades.map((t) => [
       formatDate(t.executedAt),
       t.type.toUpperCase(),
@@ -194,6 +197,8 @@ export default function TransactionsPage() {
       t.quantity,
       t.price,
       t.amount,
+      t.realizedPnl ?? "",
+      t.costBasis ?? "",
       t.commission || 0,
     ]);
 
@@ -313,11 +318,19 @@ export default function TransactionsPage() {
             icon={TrendingDown}
             delay={3}
           />
+          {stats.hasRealizedPnl && (
+            <MetricCard
+              label="Realized P&L"
+              value={stats.totalRealizedPnl}
+              icon={stats.totalRealizedPnl >= 0 ? TrendingUp : TrendingDown}
+              delay={4}
+            />
+          )}
           <MetricCard
             label="Commissions Paid"
             value={stats.totalCommissions}
             icon={Receipt}
-            delay={4}
+            delay={5}
           />
         </div>
 
@@ -491,6 +504,9 @@ export default function TransactionsPage() {
                             </div>
                           </th>
                           <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                            P&L
+                          </th>
+                          <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
                             Commission
                           </th>
                         </tr>
@@ -543,6 +559,37 @@ export default function TransactionsPage() {
                                 {trade.type === "buy" ? "-" : "+"}
                                 {formatCurrency(trade.amount)}
                               </span>
+                              {trade.type === "sell" && trade.costBasis != null && (
+                                <p className="text-xs text-muted-foreground font-normal mt-0.5">
+                                  avg cost {formatCurrency(trade.costBasis)}
+                                </p>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 text-right">
+                              {trade.type === "sell" && trade.realizedPnl != null ? (
+                                <div>
+                                  <span
+                                    className={cn(
+                                      "font-semibold",
+                                      trade.realizedPnl >= 0 ? "text-success" : "text-destructive"
+                                    )}
+                                  >
+                                    {trade.realizedPnl >= 0 ? "+" : ""}
+                                    {formatCurrency(trade.realizedPnl)}
+                                  </span>
+                                  {trade.costBasis != null && trade.costBasis > 0 && (
+                                    <p className={cn(
+                                      "text-xs mt-0.5",
+                                      trade.realizedPnl >= 0 ? "text-success/70" : "text-destructive/70"
+                                    )}>
+                                      {trade.realizedPnl >= 0 ? "+" : ""}
+                                      {((trade.realizedPnl / (trade.costBasis * trade.quantity)) * 100).toFixed(1)}%
+                                    </p>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
                             </td>
                             <td className="px-6 py-4 text-right text-muted-foreground">
                               {trade.commission
