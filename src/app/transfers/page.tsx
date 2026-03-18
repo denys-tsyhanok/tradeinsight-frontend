@@ -26,6 +26,10 @@ import {
   Download,
   Wallet,
   Activity,
+  CalendarRange,
+  TrendingUp,
+  Hash,
+  Trophy,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout";
 import {
@@ -142,6 +146,113 @@ function groupTransfersByMonth(
     net: data.deposits - data.withdrawals,
   }));
 }
+
+interface YearlyDataPoint {
+  year: string;
+  deposits: number;
+  withdrawals: number;
+  net: number;
+  depositCount: number;
+  withdrawalCount: number;
+}
+
+function groupTransfersByYear(
+  transfers: TransferResponseDto[],
+  useUsd: boolean
+): YearlyDataPoint[] {
+  const yearMap = new Map<string, { deposits: number; withdrawals: number; depositCount: number; withdrawalCount: number }>();
+
+  transfers.forEach((transfer) => {
+    if (transfer.type !== "deposit" && transfer.type !== "withdrawal") return;
+
+    const year = new Date(transfer.executedAt).getFullYear().toString();
+    if (!yearMap.has(year)) {
+      yearMap.set(year, { deposits: 0, withdrawals: 0, depositCount: 0, withdrawalCount: 0 });
+    }
+
+    const amount = useUsd ? getTransferAmountUsd(transfer) : transfer.amount;
+    const entry = yearMap.get(year)!;
+    if (transfer.type === "deposit") {
+      entry.deposits += amount;
+      entry.depositCount++;
+    } else {
+      entry.withdrawals += Math.abs(amount);
+      entry.withdrawalCount++;
+    }
+  });
+
+  return Array.from(yearMap.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([year, data]) => ({
+      year,
+      deposits: data.deposits,
+      withdrawals: data.withdrawals,
+      net: data.deposits - data.withdrawals,
+      depositCount: data.depositCount,
+      withdrawalCount: data.withdrawalCount,
+    }));
+}
+
+const YearlyTooltip = ({
+  active,
+  payload,
+  useUsd = true,
+}: {
+  active?: boolean;
+  payload?: Array<{ payload: YearlyDataPoint }>;
+  useUsd?: boolean;
+}) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    const fmt = (v: number) =>
+      useUsd
+        ? formatCurrency(v)
+        : v.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="rounded-xl border border-border/50 bg-card/95 backdrop-blur-sm px-4 py-3 shadow-elevated"
+      >
+        <p className="text-xs font-semibold text-foreground mb-2">{data.year}</p>
+        <div className="space-y-1.5">
+          {data.deposits > 0 && (
+            <div className="flex items-center justify-between gap-6">
+              <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full bg-success" />
+                Deposits ({data.depositCount})
+              </span>
+              <span className="text-sm font-semibold text-success">+{fmt(data.deposits)}</span>
+            </div>
+          )}
+          {data.withdrawals > 0 && (
+            <div className="flex items-center justify-between gap-6">
+              <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full bg-destructive" />
+                Withdrawals ({data.withdrawalCount})
+              </span>
+              <span className="text-sm font-semibold text-destructive">-{fmt(data.withdrawals)}</span>
+            </div>
+          )}
+          <div className="flex items-center justify-between gap-6 pt-1 border-t border-border/50">
+            <span className="text-xs text-muted-foreground">Net</span>
+            <span className={cn("text-sm font-semibold", data.net >= 0 ? "text-success" : "text-destructive")}>
+              {data.net >= 0 ? "+" : ""}{fmt(data.net)}
+            </span>
+          </div>
+          {data.depositCount > 0 && (
+            <div className="flex items-center justify-between gap-6">
+              <span className="text-xs text-muted-foreground">Avg deposit</span>
+              <span className="text-sm font-medium text-foreground">{fmt(data.deposits / data.depositCount)}</span>
+            </div>
+          )}
+        </div>
+      </motion.div>
+    );
+  }
+  return null;
+};
 
 const CustomTooltip = ({
   active,
@@ -407,6 +518,35 @@ export default function TransfersPage() {
       count,
     };
   }, [transfers, showUsd]);
+
+  // Yearly chart data
+  const yearlyData = React.useMemo(() => {
+    const filteredForChart = brokerFilter === "all"
+      ? transfers
+      : transfers.filter((t) => t.broker === brokerFilter);
+    return groupTransfersByYear(filteredForChart, showUsd);
+  }, [transfers, brokerFilter, showUsd]);
+
+  // Yearly stats
+  const yearlyStats = React.useMemo(() => {
+    if (yearlyData.length === 0) return null;
+
+    const totalDeposits = yearlyData.reduce((sum, y) => sum + y.deposits, 0);
+    const totalDepositCount = yearlyData.reduce((sum, y) => sum + y.depositCount, 0);
+    const avgDeposit = totalDepositCount > 0 ? totalDeposits / totalDepositCount : 0;
+    const avgDepositsPerYear = totalDepositCount / yearlyData.length;
+    const bestYear = yearlyData.reduce((best, y) => (y.deposits > best.deposits ? y : best), yearlyData[0]);
+    const avgAnnualDeposit = totalDeposits / yearlyData.length;
+
+    return {
+      avgDeposit,
+      avgDepositsPerYear: Math.round(avgDepositsPerYear * 10) / 10,
+      bestYear: bestYear.year,
+      bestYearAmount: bestYear.deposits,
+      avgAnnualDeposit,
+      totalYears: yearlyData.length,
+    };
+  }, [yearlyData]);
 
   // Pagination
   const totalPages = Math.ceil(filteredTransfers.length / pageSize);
@@ -848,6 +988,136 @@ export default function TransfersPage() {
             </CardContent>
           </Card>
         </motion.div>
+
+        {/* Yearly Breakdown */}
+        {!isLoading && yearlyData.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25 }}
+          >
+            <Card className="border-border/50 bg-gradient-to-br from-card via-card to-tertiary/30 shadow-card overflow-hidden">
+              <CardHeader className="pb-2">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                    <CalendarRange className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-heading-sm">Yearly Breakdown</CardTitle>
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                      Annual deposit & withdrawal overview
+                    </p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-4">
+                {/* Yearly Stats Grid */}
+                {yearlyStats && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div className="rounded-xl bg-tertiary/50 p-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground uppercase tracking-wider">Avg Deposit</span>
+                      </div>
+                      <p className="text-lg font-semibold text-foreground">
+                        {showUsd ? formatCurrency(yearlyStats.avgDeposit) : yearlyStats.avgDeposit.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                      </p>
+                    </div>
+                    <div className="rounded-xl bg-tertiary/50 p-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Hash className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground uppercase tracking-wider">Deposits / Year</span>
+                      </div>
+                      <p className="text-lg font-semibold text-foreground">
+                        {yearlyStats.avgDepositsPerYear}
+                      </p>
+                    </div>
+                    <div className="rounded-xl bg-tertiary/50 p-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Trophy className="h-3.5 w-3.5 text-amber-500" />
+                        <span className="text-xs text-muted-foreground uppercase tracking-wider">Best Year</span>
+                      </div>
+                      <p className="text-lg font-semibold text-foreground">
+                        {yearlyStats.bestYear}
+                      </p>
+                      <p className="text-xs text-success">
+                        +{showUsd ? formatCurrency(yearlyStats.bestYearAmount) : yearlyStats.bestYearAmount.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                      </p>
+                    </div>
+                    <div className="rounded-xl bg-tertiary/50 p-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <CalendarRange className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground uppercase tracking-wider">Avg / Year</span>
+                      </div>
+                      <p className="text-lg font-semibold text-foreground">
+                        {showUsd ? formatCurrency(yearlyStats.avgAnnualDeposit) : yearlyStats.avgAnnualDeposit.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Yearly Bar Chart */}
+                <div className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={yearlyData}
+                      margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                    >
+                      <defs>
+                        <linearGradient id="yearlyDepositsGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="hsl(var(--success))" stopOpacity={1} />
+                          <stop offset="100%" stopColor="hsl(var(--success))" stopOpacity={0.7} />
+                        </linearGradient>
+                        <linearGradient id="yearlyWithdrawalsGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="hsl(var(--destructive))" stopOpacity={1} />
+                          <stop offset="100%" stopColor="hsl(var(--destructive))" stopOpacity={0.7} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        vertical={false}
+                        stroke="hsl(var(--border))"
+                        strokeOpacity={0.5}
+                      />
+                      <XAxis
+                        dataKey="year"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12, fontWeight: 500 }}
+                        tickMargin={8}
+                      />
+                      <YAxis
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+                        tickFormatter={(value: number) =>
+                          showUsd
+                            ? `$${(value / 1000).toFixed(0)}k`
+                            : `${(value / 1000).toFixed(0)}k`
+                        }
+                        width={55}
+                        tickMargin={8}
+                      />
+                      <Tooltip content={<YearlyTooltip useUsd={showUsd} />} />
+                      <Bar
+                        dataKey="deposits"
+                        fill="url(#yearlyDepositsGradient)"
+                        radius={[4, 4, 0, 0]}
+                        name="Deposits"
+                      />
+                      <Bar
+                        dataKey="withdrawals"
+                        fill="url(#yearlyWithdrawalsGradient)"
+                        radius={[4, 4, 0, 0]}
+                        name="Withdrawals"
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
 
         {/* Filters */}
         <motion.div
